@@ -1,52 +1,52 @@
 program tsunami
+  use iso_fortran_env, only: int32, real32
+  use mod_diff, only: diff => diff_centered
+  use mod_initial, only: set_gaussian
 
-    implicit none
+  implicit none
 
-    integer :: n
+  integer(int32) :: n
 
-    integer, parameter :: grid_size = 100
-    integer, parameter :: num_time_steps = 100
-    real, parameter :: dt = 1.0, dx = 1.0, c = 1.0
+  integer(int32), parameter :: grid_size = 100 ! grid size in x
+  integer(int32), parameter :: num_time_steps = 5000 ! number of time steps
 
-    real :: h(grid_size)
+  real(real32), parameter :: dt = 0.02 ! time step [s]
+  real(real32), parameter :: dx = 1 ! grid spacing [m]
+  real(real32), parameter :: g = 9.8 ! gravitational acceleration [m/s^2]
+  real(real32), parameter :: hmean = 10 ! mean water depth [m]
 
-    integer, parameter :: icenter = 25
-    real, parameter :: decay = 0.02
+  real(real32) :: h(grid_size), u(grid_size)
 
-    if (grid_size <= 0) stop 'grid_size must be > 0'
-    if (dt <= 0) stop 'time step dt must be > 0'
-    if (dx <= 0) stop 'grid spacing dx must be > 0'
-    if (c <= 0) stop 'background flow speed c must be > 0'
+  integer(int32), parameter :: icenter = 25
+  real(real32), parameter :: decay = 0.02
 
-    call set_gaussian(h, icenter, decay)
+  character(*), parameter :: fmt = '(i0,*(1x,es15.8e2))'
 
-    print *, 0, h
+  ! check input parameter values
+  if (grid_size <= 0) stop 'grid_size must be > 0'
+  if (dt <= 0) stop 'time step dt must be > 0'
+  if (dx <= 0) stop 'grid spacing dx must be > 0'
 
-    time_loop: do n = 1, num_time_steps
-        h = h - c * diff(h) / dx * dt
-        print *, n, h
-    end do time_loop
+  ! initialize water height to a Gaussian blob
+  call set_gaussian(h, icenter, decay)
 
-contains
-    pure function diff(x) result(dx)
-        real, intent(in) :: x(:)
-        real :: dx(size(x))
-        integer :: im
+  ! initialize water velocity to zero
+  u = 0
 
-        im = size(x)
-        dx(1) = x(1) - x(im)
-        dx(2:im) = x(2:im) - x(1:im-1)
-    end function diff
+  ! write initial state to screen
+  print fmt, 0, h
 
-    pure subroutine set_gaussian(x, icenter, decay)
-        real, intent(in out) :: x(:)
-        integer, intent(in) :: icenter
-        real, intent(in) :: decay
-        integer :: i
+  time_loop: do n = 1, num_time_steps
 
-        do concurrent (i = 1:size(x))
-            x(i) = exp(-decay * (i - icenter)**2)
-        end do
-    end subroutine set_gaussian
+    ! compute u at next time step
+    u = u - (u * diff(u) + g * diff(h)) / dx * dt
+
+    ! compute h at next time step
+    h = h - diff(u * (hmean + h)) / dx * dt
+
+    ! write current state to screen
+    print fmt, n, h
+
+  end do time_loop
 
 end program tsunami

@@ -13,6 +13,7 @@ input_file = args.input_file
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
 from sys import platform
 
 if platform == 'win32':
@@ -29,7 +30,7 @@ data = [line.rstrip().split() for line in open(input_file, encoding = unicodeVar
 time = [float(line[0]) for line in data]
 h = np.array([[float(x) for x in line[1:]] for line in data])
 x = np.arange(1, h.shape[1]+1)
-time_steps = [0, 25, 50, 75]
+time_steps = [0, 1000, 5000, 10000]
 
 fig = plt.figure(figsize=(8, 10))
 axes = [plt.subplot2grid((4, 1), (row, 0), colspan=1, rowspan=1)
@@ -58,3 +59,41 @@ axes[-1].set_xlabel('Spatial grid index')
 
 plt.savefig('water_height_ch02.svg')
 plt.close(fig)
+
+# self added
+
+# Create an animation for time steps 0..100 (or up to available data).
+max_frame = min(500, len(time) - 1)
+frames = list(range(max_frame + 1))
+
+fig_anim, ax_anim = plt.subplots(figsize=(10, 4))
+line, = ax_anim.plot([], [], 'b-')
+fill_holder = [None]
+
+ax_anim.set_xlim(1, 100)
+ax_anim.set_ylim(0, 1)
+ax_anim.grid()
+ax_anim.set_xlabel('Spatial grid index')
+ax_anim.set_ylabel('Height', fontsize=16)
+ax_anim.set_xticks([25, 50, 75, 100])
+ax_anim.set_yticks([0, 0.25, 0.5, 0.75, 1])
+
+def update(frame_idx):
+    if fill_holder[0] is not None:
+        fill_holder[0].remove()
+    y = h[frame_idx, :]
+    line.set_data(x, y)
+    fill_holder[0] = ax_anim.fill_between(x, 0, y, color='b', alpha=0.4)
+    ax_anim.set_title('Time step %3i' % frame_idx)
+    return line, fill_holder[0]
+
+ani = FuncAnimation(fig_anim, update, frames=frames, blit=False)
+ani.save('water_height_ch02.gif', writer=PillowWriter(fps=60))
+
+try:
+    ani.save('water_height_ch02.mp4', writer=FFMpegWriter(fps=60))
+except (RuntimeError, FileNotFoundError):
+    # FFmpeg may be unavailable in some environments.
+    pass
+
+plt.close(fig_anim)
