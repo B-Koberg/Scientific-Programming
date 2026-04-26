@@ -30,7 +30,7 @@ data = [line.rstrip().split() for line in open(input_file, encoding = unicodeVar
 time = [float(line[0]) for line in data]
 h = np.array([[float(x) for x in line[1:]] for line in data])
 x = np.arange(1, h.shape[1]+1)
-time_steps = [0, 1000, 5000, 10000]
+time_steps = [0, 1000, 2500, 5000]
 
 fig = plt.figure(figsize=(8, 10))
 axes = [plt.subplot2grid((4, 1), (row, 0), colspan=1, rowspan=1)
